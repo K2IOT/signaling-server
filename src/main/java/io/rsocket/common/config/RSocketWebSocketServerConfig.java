@@ -79,6 +79,7 @@ public class RSocketWebSocketServerConfig implements ApplicationListener<Applica
         HttpServer httpServer = HttpServer.create()
                 .host(host)
                 .port(port)
+                .route(routes -> routes.ws(websocketPath, (in,out) -> out.neverComplete()))
                 .doOnConnection(connection -> {
                     logger.info("WebSocket Client connected: {}", connection.channel().remoteAddress());
                 });
