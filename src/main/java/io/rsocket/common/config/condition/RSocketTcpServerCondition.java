@@ -16,7 +16,7 @@ public class RSocketTcpServerCondition extends ResourceCondition {
 
     static final String RSOCKET_TCP_SERVER_PROPERTY = "rsocket.tcp.server.enabled";
 
-    protected RSocketTcpServerCondition(String name, String property, String[] resourceLocations) {
+    public RSocketTcpServerCondition() {
         super("RSocket-Tcp-Server-Condition", RSOCKET_TCP_SERVER_PROPERTY, new String[0]);
     }
 

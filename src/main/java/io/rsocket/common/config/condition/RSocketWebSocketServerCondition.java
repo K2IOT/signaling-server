@@ -18,7 +18,7 @@ public class RSocketWebSocketServerCondition extends ResourceCondition {
    
     static final String RSOCKET_WEBSOCKET_SERVER_PROPERTY = "rsocket.websocket.server.enabled";
     
-    protected RSocketWebSocketServerCondition(String name, String property, String[] resourceLocations) {
+    public RSocketWebSocketServerCondition() {
         super("RSocket-WebSocket-Server-Condition", RSOCKET_WEBSOCKET_SERVER_PROPERTY, new String[0]);
     }
 
