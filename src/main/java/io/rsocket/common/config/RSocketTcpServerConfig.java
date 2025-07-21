@@ -22,6 +22,7 @@ import io.rsocket.core.RSocketServer;
 import io.rsocket.frame.decoder.PayloadDecoder;
 import io.rsocket.transport.netty.server.CloseableChannel;
 import io.rsocket.transport.netty.server.TcpServerTransport;
+import jakarta.annotation.PreDestroy;
 import reactor.netty.tcp.TcpServer;
 
 @Conditional({ RSocketTcpServerCondition.class })
@@ -95,6 +96,7 @@ public class RSocketTcpServerConfig implements ApplicationListener<ApplicationRe
 
     }
 
+    @PreDestroy
     public void shutdown() {
         logger.info("Shutting down RSocket TCP servers...");
 

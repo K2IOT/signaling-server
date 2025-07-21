@@ -22,14 +22,15 @@ public class RSocketWebSocketServerCondition extends ResourceCondition {
         super("RSocket-WebSocket-Server-Condition", RSOCKET_WEBSOCKET_SERVER_PROPERTY, new String[0]);
     }
 
+    @Override
     public ConditionOutcome getMatchOutcome(ConditionContext context, AnnotatedTypeMetadata metadata) {
         if (context.getEnvironment().containsProperty(RSOCKET_WEBSOCKET_SERVER_PROPERTY)) {
             boolean isEnabled = context.getEnvironment().getProperty(RSOCKET_WEBSOCKET_SERVER_PROPERTY, Boolean.class, true);
             if (isEnabled) {
-                logger.info("RSocket WebSocket Server is enabled");
+              //  logger.info("RSocket WebSocket Server is enabled");
                 return ConditionOutcome.match("RSocket WebSocket Server is enabled");
             } else {
-                logger.info("RSocket WebSocket Server is disabled");
+              //  logger.info("RSocket WebSocket Server is disabled");
                 return ConditionOutcome.noMatch("RSocket WebSocket Server is disabled");
             }
         }

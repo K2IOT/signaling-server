@@ -20,14 +20,15 @@ public class RSocketTcpServerCondition extends ResourceCondition {
         super("RSocket-Tcp-Server-Condition", RSOCKET_TCP_SERVER_PROPERTY, new String[0]);
     }
 
+    @Override
     public ConditionOutcome getMatchOutcome(ConditionContext context, AnnotatedTypeMetadata metadata){
         if (context.getEnvironment().containsProperty(RSOCKET_TCP_SERVER_PROPERTY)) {
             boolean isEnabled = context.getEnvironment().getProperty(RSOCKET_TCP_SERVER_PROPERTY, Boolean.class, true);
             if (isEnabled) {
-                logger.info("RSocket TCP Server is enabled");
+              //  logger.info("RSocket TCP Server is enabled");
                 return ConditionOutcome.match("RSocket TCP Server is enabled");
             } else {
-                logger.info("RSocket TCP Server is disabled");
+              //  logger.info("RSocket TCP Server is disabled");
                 return ConditionOutcome.noMatch("RSocket TCP Server is disabled");
             }
         }

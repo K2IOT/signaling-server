@@ -22,6 +22,7 @@ import io.rsocket.core.RSocketServer;
 import io.rsocket.frame.decoder.PayloadDecoder;
 import io.rsocket.transport.netty.server.CloseableChannel;
 import io.rsocket.transport.netty.server.WebsocketServerTransport;
+import jakarta.annotation.PreDestroy;
 import reactor.netty.http.server.HttpServer;
 
 @Conditional({ RSocketWebSocketServerCondition.class })
@@ -97,6 +98,7 @@ public class RSocketWebSocketServerConfig implements ApplicationListener<Applica
                 .block(Duration.ofMillis(setupTimeout));
     }
 
+    @PreDestroy
     public void shutdown() {
         logger.info("Shutting down RSocket WebSocket Server...");
         if (webSocketServerChannel != null && !webSocketServerChannel.isDisposed()) {
