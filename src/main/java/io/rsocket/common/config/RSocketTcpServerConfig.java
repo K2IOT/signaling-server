@@ -5,9 +5,6 @@ import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationListener;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
@@ -27,7 +24,7 @@ import reactor.netty.tcp.TcpServer;
 
 @Conditional({ RSocketTcpServerCondition.class })
 @Configuration
-public class RSocketTcpServerConfig implements ApplicationListener<ApplicationReadyEvent> {
+public class RSocketTcpServerConfig {
 
     private static final Logger logger = LoggerFactory.getLogger(RSocketTcpServerConfig.class);
 
@@ -42,8 +39,6 @@ public class RSocketTcpServerConfig implements ApplicationListener<ApplicationRe
 
     @Value("${rsocket.tcp.setup-timeout:30000}") // 30 seconds
     private long setupTimeout;
-
-    private final ApplicationContext applicationContext;
 
     private CloseableChannel tcpServerChannel;
 
@@ -67,9 +62,9 @@ public class RSocketTcpServerConfig implements ApplicationListener<ApplicationRe
         return messageHandler;
     }
 
-    public void startTcpServer(SocketAcceptor tcpSocketAcceptor) {
+    @Bean
+    public CloseableChannel tcpServerChannel(SocketAcceptor tcpSocketAcceptor) {
         logger.info("Starting RSocket TCP server on {}:{}", host, port);
-
         TcpServer tcpServer = TcpServer.create()
                 .host(host)
                 .port(port)
@@ -79,10 +74,7 @@ public class RSocketTcpServerConfig implements ApplicationListener<ApplicationRe
                 .doOnChannelInit((observer, channel, remoteAddress) -> {
                     logger.debug("TCP Channel initialized for: {}", remoteAddress);
                 });
-
-        logger.info("RSocket TCP server started successfully.");
-
-        tcpServerChannel = RSocketServer.create(tcpSocketAcceptor)
+        this.tcpServerChannel = RSocketServer.create(tcpSocketAcceptor)
                 .payloadDecoder(PayloadDecoder.ZERO_COPY)
                 .maxInboundPayloadSize(maxFrameSize)
                 .bind(TcpServerTransport.create(tcpServer))
@@ -93,13 +85,12 @@ public class RSocketTcpServerConfig implements ApplicationListener<ApplicationRe
                     logger.error("Failed to start RSocket TCP Server", throwable);
                 })
                 .block(Duration.ofMillis(setupTimeout));
-
+        return this.tcpServerChannel;
     }
 
     @PreDestroy
     public void shutdown() {
         logger.info("Shutting down RSocket TCP servers...");
-
         if (tcpServerChannel != null && !tcpServerChannel.isDisposed()) {
             tcpServerChannel.dispose();
             logger.info("TCP Server shut down");
@@ -107,20 +98,6 @@ public class RSocketTcpServerConfig implements ApplicationListener<ApplicationRe
             logger.warn("TCP Server was not running, nothing to shut down.");
         }
         logger.info("RSocket TCP Server shutdown completed.");
-    }
-
-    public RSocketTcpServerConfig(ApplicationContext applicationContext) {
-        this.applicationContext = applicationContext;
-    }
-
-    @Override
-    public void onApplicationEvent(ApplicationReadyEvent event) {
-        if (event.getApplicationContext() == this.applicationContext) {
-            SocketAcceptor socketAcceptor = applicationContext.getBean("tcpSocketAcceptor", SocketAcceptor.class);
-            startTcpServer(socketAcceptor);
-        } else {
-            logger.warn("Application context mismatch, RSocket TCP Server will not start.");
-        }
     }
 
 }

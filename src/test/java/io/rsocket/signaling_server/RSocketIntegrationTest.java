@@ -1,11 +1,11 @@
 package io.rsocket.signaling_server;
 
-import io.rsocket.signaling_server.dto.ChatRequest;
-import io.rsocket.signaling_server.dto.ChatResponse;
-import io.rsocket.signaling_server.dto.Message;
-import io.rsocket.frame.decoder.PayloadDecoder;
-import io.rsocket.transport.netty.client.TcpClientTransport;
-import io.rsocket.transport.netty.client.WebsocketClientTransport;
+import java.net.URI;
+import java.time.Duration;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -16,17 +16,17 @@ import org.springframework.http.codec.json.Jackson2JsonEncoder;
 import org.springframework.messaging.rsocket.RSocketRequester;
 import org.springframework.messaging.rsocket.RSocketStrategies;
 import org.springframework.test.context.ActiveProfiles;
+
+import io.rsocket.frame.decoder.PayloadDecoder;
+import io.rsocket.signaling_server.dto.ChatRequest;
+import io.rsocket.signaling_server.dto.ChatResponse;
+import io.rsocket.signaling_server.dto.Message;
+import io.rsocket.transport.netty.client.TcpClientTransport;
+import io.rsocket.transport.netty.client.WebsocketClientTransport;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 import reactor.util.retry.Retry;
-
-import java.net.URI;
-import java.time.Duration;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT
@@ -108,7 +108,7 @@ class RSocketIntegrationTest {
                         .keepAlive(Duration.ofSeconds(60), Duration.ofSeconds(30))
                         .reconnect(Retry.fixedDelay(3, Duration.ofSeconds(2)))
                         .payloadDecoder(PayloadDecoder.ZERO_COPY))
-                    .transport(WebsocketClientTransport.create(URI.create("ws://localhost:9000")));
+                    .transport(WebsocketClientTransport.create(URI.create("ws://localhost:9000/rsocket")));
             
             // Establish connection
             try {

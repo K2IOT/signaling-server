@@ -5,9 +5,6 @@ import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationListener;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Configuration;
@@ -23,13 +20,11 @@ import io.rsocket.frame.decoder.PayloadDecoder;
 import io.rsocket.transport.netty.server.CloseableChannel;
 import io.rsocket.transport.netty.server.WebsocketServerTransport;
 import jakarta.annotation.PreDestroy;
-import reactor.netty.DisposableServer;
 import reactor.netty.http.server.HttpServer;
-import reactor.core.publisher.Mono;
 
 @Conditional({ RSocketWebSocketServerCondition.class })
 @Configuration
-public class RSocketWebSocketServerConfig implements ApplicationListener<ApplicationReadyEvent> {
+public class RSocketWebSocketServerConfig {
     private static final Logger logger = LoggerFactory.getLogger(RSocketWebSocketServerConfig.class);
 
     @Value("${rsocket.websocket.host:localhost}")
@@ -46,8 +41,6 @@ public class RSocketWebSocketServerConfig implements ApplicationListener<Applica
 
     @Value("${rsocket.websocket.path:/rsocket}")
     private String websocketPath;
-
-    private final ApplicationContext applicationContext;
 
     private CloseableChannel webSocketServerChannel;
 
@@ -69,23 +62,30 @@ public class RSocketWebSocketServerConfig implements ApplicationListener<Applica
         return messageHandler;
     }
 
-    private void startWebSocketServer(SocketAcceptor socketAcceptor) {
-
-        // TODO: Config prefix for /rsocket path
-
+    @Bean
+    public CloseableChannel webSocketServerChannel(SocketAcceptor webSocketSocketAcceptor) {
         logger.info("Starting RSocket WebSocket Server on {}:{}{}", host, port, websocketPath);
+
+        // ServerTransport.ConnectionAcceptor connectionAcceptor = RSocketServer.create(webSocketSocketAcceptor)
+        //         .asConnectionAcceptor();
 
         HttpServer httpServer = HttpServer.create()
                 .host(host)
                 .port(port);
-
-        webSocketServerChannel = RSocketServer.create(socketAcceptor).payloadDecoder(PayloadDecoder.ZERO_COPY)
-                .maxInboundPayloadSize(maxFrameSize).bind(WebsocketServerTransport.create(httpServer))
+                // .route(routes -> routes.ws(websocketPath, WebsocketRouteTransport.newHandler(connectionAcceptor)));
+                
+        this.webSocketServerChannel = RSocketServer.create(webSocketSocketAcceptor)
+                .payloadDecoder(PayloadDecoder.ZERO_COPY)
+                .maxInboundPayloadSize(maxFrameSize)
+                .bind(WebsocketServerTransport.create(httpServer))
                 .doOnSuccess(closeableChannel -> {
                     logger.info("RSocket WebSocket Server started successfully on {}:{}{}", host, port, websocketPath);
-                }).doOnError(throwable -> {
+                })
+                .doOnError(throwable -> {
                     logger.error("Failed to start RSocket WebSocket Server", throwable);
-                }).block(Duration.ofMillis(setupTimeout));
+                })
+                .block(Duration.ofMillis(setupTimeout));
+        return this.webSocketServerChannel;
     }
 
     @PreDestroy
@@ -98,20 +98,6 @@ public class RSocketWebSocketServerConfig implements ApplicationListener<Applica
             logger.warn("RSocket WebSocket Server was not running, nothing to shutdown.");
         }
         logger.info("RSocket WebSocket Server shutdown completed.");
-    }
-
-    public RSocketWebSocketServerConfig(ApplicationContext applicationContext) {
-        this.applicationContext = applicationContext;
-    }
-
-    @Override
-    public void onApplicationEvent(ApplicationReadyEvent event) {
-        if (event.getApplicationContext() == this.applicationContext) {
-            SocketAcceptor socketAcceptor = applicationContext.getBean("webSocketSocketAcceptor", SocketAcceptor.class);
-            startWebSocketServer(socketAcceptor);
-        } else {
-            logger.warn("Application context mismatch, RSocket WebSocket Server will not start.");
-        }
     }
 
 }
