@@ -45,7 +45,6 @@ public class RSocketWebSocketServerConfig implements ApplicationListener<Applica
     @Value("${rsocket.websocket.path:/rsocket}")
     private String websocketPath;
 
-
     private final ApplicationContext applicationContext;
 
     private CloseableChannel webSocketServerChannel;
@@ -79,7 +78,15 @@ public class RSocketWebSocketServerConfig implements ApplicationListener<Applica
         HttpServer httpServer = HttpServer.create()
                 .host(host)
                 .port(port)
-                .route(routes -> routes.ws(websocketPath, (in,out) -> out.neverComplete()))
+                .route(routes -> routes.ws(websocketPath, (wsInbound, wsOutbound) -> {
+                    // Keep the connection alive and handle inbound messages
+                    return wsInbound.receive()
+                            .then()
+                            .doOnError(error -> 
+                                logger.error("WebSocket error: ", error))
+                            .doFinally(signalType -> 
+                                logger.info("WebSocket connection finished with signal: {}", signalType));
+                }))
                 .doOnConnection(connection -> {
                     logger.info("WebSocket Client connected: {}", connection.channel().remoteAddress());
                 });
