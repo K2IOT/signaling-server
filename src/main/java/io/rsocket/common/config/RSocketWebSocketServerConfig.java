@@ -17,7 +17,9 @@ import io.rsocket.SocketAcceptor;
 import io.rsocket.common.config.condition.RSocketWebSocketServerCondition;
 import io.rsocket.core.RSocketServer;
 import io.rsocket.frame.decoder.PayloadDecoder;
+import io.rsocket.transport.ServerTransport;
 import io.rsocket.transport.netty.server.CloseableChannel;
+import io.rsocket.transport.netty.server.WebsocketRouteTransport;
 import io.rsocket.transport.netty.server.WebsocketServerTransport;
 import jakarta.annotation.PreDestroy;
 import reactor.netty.http.server.HttpServer;
@@ -66,15 +68,16 @@ public class RSocketWebSocketServerConfig {
     public CloseableChannel webSocketServerChannel(SocketAcceptor webSocketSocketAcceptor) {
         logger.info("Starting RSocket WebSocket Server on {}:{}{}", host, port, websocketPath);
 
-        // ServerTransport.ConnectionAcceptor connectionAcceptor = RSocketServer.create(webSocketSocketAcceptor)
-        //         .asConnectionAcceptor();
+        RSocketServer rSocketServer = RSocketServer.create(webSocketSocketAcceptor);
+
+        ServerTransport.ConnectionAcceptor connectionAcceptor = rSocketServer.asConnectionAcceptor();
 
         HttpServer httpServer = HttpServer.create()
                 .host(host)
-                .port(port);
-                // .route(routes -> routes.ws(websocketPath, WebsocketRouteTransport.newHandler(connectionAcceptor)));
+                .port(port)
+                .route(routes -> routes.ws(websocketPath, WebsocketRouteTransport.newHandler(connectionAcceptor)));
                 
-        this.webSocketServerChannel = RSocketServer.create(webSocketSocketAcceptor)
+        this.webSocketServerChannel = rSocketServer
                 .payloadDecoder(PayloadDecoder.ZERO_COPY)
                 .maxInboundPayloadSize(maxFrameSize)
                 .bind(WebsocketServerTransport.create(httpServer))
@@ -99,5 +102,6 @@ public class RSocketWebSocketServerConfig {
         }
         logger.info("RSocket WebSocket Server shutdown completed.");
     }
+
 
 }
