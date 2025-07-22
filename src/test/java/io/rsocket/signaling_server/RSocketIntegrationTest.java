@@ -3,6 +3,7 @@ package io.rsocket.signaling_server;
 import io.rsocket.signaling_server.dto.ChatRequest;
 import io.rsocket.signaling_server.dto.ChatResponse;
 import io.rsocket.signaling_server.dto.Message;
+import io.rsocket.frame.decoder.PayloadDecoder;
 import io.rsocket.transport.netty.client.TcpClientTransport;
 import io.rsocket.transport.netty.client.WebsocketClientTransport;
 import org.junit.jupiter.api.AfterEach;
@@ -42,9 +43,26 @@ class RSocketIntegrationTest {
                 .decoder(new Jackson2JsonDecoder())
                 .build();
                 
-        // Initialize requesters
-        createAndInitTcpRequester();
-        createAndInitWsRequester();
+        // Initialize requesters with retries
+        for (int i = 0; i < 3; i++) {
+            try {
+                tcpRequester = createAndInitTcpRequester();
+                wsRequester = createAndInitWsRequester();
+                if (tcpRequester != null && wsRequester != null) {
+                    break;
+                }
+            } catch (Exception e) {
+                if (i == 2) {
+                    throw new RuntimeException("Failed to initialize requesters after 3 attempts", e);
+                }
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException(ie);
+                }
+            }
+        }
     }
     
     @AfterEach
@@ -67,8 +85,17 @@ class RSocketIntegrationTest {
             tcpRequester = RSocketRequester.builder()
                     .rsocketStrategies(strategies)
                     .rsocketConnector(connector -> connector
-                        .keepAlive(Duration.ofSeconds(60), Duration.ofSeconds(30)))
+                        .keepAlive(Duration.ofSeconds(60), Duration.ofSeconds(30))
+                        .payloadDecoder(PayloadDecoder.ZERO_COPY))
                     .transport(TcpClientTransport.create("localhost", 7000));
+            
+            // Establish connection
+            try {
+                return tcpRequester;
+            } catch (Exception e) {
+                tcpRequester = null;
+                throw e;
+            }
         }
         return tcpRequester;
     }
@@ -78,9 +105,18 @@ class RSocketIntegrationTest {
             wsRequester = RSocketRequester.builder()
                     .rsocketStrategies(strategies)
                     .rsocketConnector(connector -> connector
-                        .keepAlive(Duration.ofSeconds(60), Duration.ofSeconds(30))  // Add keepalive
-                        .reconnect(Retry.fixedDelay(3, Duration.ofSeconds(2))))  // Add reconnection strategy
-                    .transport(WebsocketClientTransport.create(URI.create("ws://localhost:9000/rsocket"))); // Use the correct path
+                        .keepAlive(Duration.ofSeconds(60), Duration.ofSeconds(30))
+                        .reconnect(Retry.fixedDelay(3, Duration.ofSeconds(2)))
+                        .payloadDecoder(PayloadDecoder.ZERO_COPY))
+                    .transport(WebsocketClientTransport.create(URI.create("ws://localhost:9000")));
+            
+            // Establish connection
+            try {
+                return wsRequester;
+            } catch (Exception e) {
+                wsRequester = null;
+                throw e;
+            }
         }
         return wsRequester;
     }

@@ -23,7 +23,9 @@ import io.rsocket.frame.decoder.PayloadDecoder;
 import io.rsocket.transport.netty.server.CloseableChannel;
 import io.rsocket.transport.netty.server.WebsocketServerTransport;
 import jakarta.annotation.PreDestroy;
+import reactor.netty.DisposableServer;
 import reactor.netty.http.server.HttpServer;
+import reactor.core.publisher.Mono;
 
 @Conditional({ RSocketWebSocketServerCondition.class })
 @Configuration
@@ -49,11 +51,11 @@ public class RSocketWebSocketServerConfig implements ApplicationListener<Applica
 
     private CloseableChannel webSocketServerChannel;
 
+    private DisposableServer disposableServer;
+
     @Bean
     public RSocketStrategies webSocketRSocketStrategies() {
-        return RSocketStrategies.builder()
-                .encoder(new Jackson2JsonEncoder())
-                .decoder(new Jackson2JsonDecoder())
+        return RSocketStrategies.builder().encoder(new Jackson2JsonEncoder()).decoder(new Jackson2JsonDecoder())
                 .build();
     }
 
@@ -77,33 +79,15 @@ public class RSocketWebSocketServerConfig implements ApplicationListener<Applica
 
         HttpServer httpServer = HttpServer.create()
                 .host(host)
-                .port(port)
-                .route(routes -> routes.ws(websocketPath, (wsInbound, wsOutbound) -> {
-                    // Keep the connection alive and handle inbound messages
-                    return wsInbound.receive()
-                            .then()
-                            .doOnError(error -> 
-                                logger.error("WebSocket error: ", error))
-                            .doFinally(signalType -> 
-                                logger.info("WebSocket connection finished with signal: {}", signalType));
-                }))
-                .doOnConnection(connection -> {
-                    logger.info("WebSocket Client connected: {}", connection.channel().remoteAddress());
-                });
-
-        webSocketServerChannel = RSocketServer.create(socketAcceptor)
-                .payloadDecoder(PayloadDecoder.ZERO_COPY)
-                .maxInboundPayloadSize(maxFrameSize)
-                .bind(
-                        WebsocketServerTransport.create(httpServer))
+                .port(port);
+                
+        webSocketServerChannel = RSocketServer.create(socketAcceptor).payloadDecoder(PayloadDecoder.ZERO_COPY)
+                .maxInboundPayloadSize(maxFrameSize).bind(WebsocketServerTransport.create(httpServer))
                 .doOnSuccess(closeableChannel -> {
-                    logger.info("RSocket WebSocket Server started successfully on {}:{}{}",
-                            host, port, websocketPath);
-                })
-                .doOnError(throwable -> {
+                    logger.info("RSocket WebSocket Server started successfully on {}:{}{}", host, port, websocketPath);
+                }).doOnError(throwable -> {
                     logger.error("Failed to start RSocket WebSocket Server", throwable);
-                })
-                .block(Duration.ofMillis(setupTimeout));
+                }).block(Duration.ofMillis(setupTimeout));
     }
 
     @PreDestroy

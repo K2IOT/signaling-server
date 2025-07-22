@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Set logging level for RSocket related classes -->
+    <logger name="io.rsocket" level="DEBUG"/>
+    <logger name="reactor.netty" level="DEBUG"/>
+    <logger name="io.rsocket.common.config" level="DEBUG"/>
+    <logger name="io.rsocket.signaling_server" level="DEBUG"/>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>
