@@ -51,8 +51,6 @@ public class RSocketWebSocketServerConfig implements ApplicationListener<Applica
 
     private CloseableChannel webSocketServerChannel;
 
-    private DisposableServer disposableServer;
-
     @Bean
     public RSocketStrategies webSocketRSocketStrategies() {
         return RSocketStrategies.builder().encoder(new Jackson2JsonEncoder()).decoder(new Jackson2JsonDecoder())
@@ -80,7 +78,7 @@ public class RSocketWebSocketServerConfig implements ApplicationListener<Applica
         HttpServer httpServer = HttpServer.create()
                 .host(host)
                 .port(port);
-                
+
         webSocketServerChannel = RSocketServer.create(socketAcceptor).payloadDecoder(PayloadDecoder.ZERO_COPY)
                 .maxInboundPayloadSize(maxFrameSize).bind(WebsocketServerTransport.create(httpServer))
                 .doOnSuccess(closeableChannel -> {
